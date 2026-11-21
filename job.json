@@ -1,0 +1,5 @@
+{"mode": "still", "samples": 48, "res": 100, "chunks": [
+  {"id": "a", "frames": "120 330"},
+  {"id": "b", "frames": "620 860"},
+  {"id": "c", "frames": "1000 1340"}
+]}
