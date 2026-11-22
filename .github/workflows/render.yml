@@ -44,6 +44,8 @@ jobs:
           openssl enc -d -aes-256-cbc -pbkdf2 -in scene.enc -out /tmp/s.py -pass env:SCENE_KEY
           export SAMPLES=$(python3 -c "import json;print(json.load(open('job.json'))['samples'])")
           export RES=$(python3 -c "import json;print(json.load(open('job.json'))['res'])")
+          export RW=$(python3 -c "import json;print(json.load(open('job.json')).get('rw',1920))")
+          export RH=$(python3 -c "import json;print(json.load(open('job.json')).get('rh',1080))")
           export OUT=frames
           nproc
           start=$(date +%s)
@@ -56,7 +58,7 @@ jobs:
           cat result/time_${{ matrix.chunk.id }}.txt
           if [ "$(python3 -c "import json;print(json.load(open('job.json'))['mode'])")" = "video" ]; then
             first=$(ls frames | head -1 | sed 's/f_0*\([0-9]*\)\.png/\1/')
-            ffmpeg -loglevel error -framerate 24 -start_number ${first:-0} -i frames/f_%05d.png -c:v libx264 -preset slow -crf 15 -pix_fmt yuv420p result/part_${{ matrix.chunk.id }}.mp4
+            ffmpeg -loglevel error -framerate 24 -start_number ${first:-0} -i frames/f_%05d.png -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p result/part_${{ matrix.chunk.id }}.mp4
           else
             cp frames/*.png result/
           fi
