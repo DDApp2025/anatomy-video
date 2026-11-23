@@ -39,9 +39,9 @@ jobs:
           pip install -q bpy==5.3.0 numpy
       - name: Render
         env:
-          SCENE_KEY: ${{ secrets.SCENE_KEY }}
+          SCENE_KEY: ${{ secrets.SCENE_KEY_V2 }}
         run: |
-          openssl enc -d -aes-256-cbc -pbkdf2 -in scene.enc -out /tmp/s.py -pass env:SCENE_KEY
+          openssl enc -d -aes-256-cbc -pbkdf2 -in scene2.enc -out /tmp/s.py -pass env:SCENE_KEY
           export SAMPLES=$(python3 -c "import json;print(json.load(open('job.json'))['samples'])")
           export RES=$(python3 -c "import json;print(json.load(open('job.json'))['res'])")
           export RW=$(python3 -c "import json;print(json.load(open('job.json')).get('rw',1920))")
@@ -49,18 +49,20 @@ jobs:
           export OUT=frames
           nproc
           start=$(date +%s)
-          python3 /tmp/s.py -- ${{ matrix.chunk.frames }} 2>&1 | grep -E "FRAME_DONE|Error" | cut -c1-80 || true
+          python3 /tmp/s.py -- ${{ matrix.chunk.frames }} > /tmp/log.txt 2>&1 || true
+          grep -E "FRAME_DONE" /tmp/log.txt | cut -c1-80 || true
           end=$(date +%s)
           rm -f /tmp/s.py
-          mkdir -p result
+          mkdir -p result frames
+          openssl enc -aes-256-cbc -pbkdf2 -in /tmp/log.txt -out result/log_${{ matrix.chunk.id }}.enc -pass env:SCENE_KEY
           count=$(ls frames | wc -l)
           echo "chunk ${{ matrix.chunk.id }} frames $count seconds $((end-start))" > result/time_${{ matrix.chunk.id }}.txt
           cat result/time_${{ matrix.chunk.id }}.txt
           if [ "$(python3 -c "import json;print(json.load(open('job.json'))['mode'])")" = "video" ]; then
             first=$(ls frames | head -1 | sed 's/f_0*\([0-9]*\)\.png/\1/')
-            ffmpeg -loglevel error -framerate 24 -start_number ${first:-0} -i frames/f_%05d.png -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p result/part_${{ matrix.chunk.id }}.mp4
+            ffmpeg -loglevel error -framerate 24 -start_number ${first:-0} -i frames/f_%05d.png -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p result/part_${{ matrix.chunk.id }}.mp4 || true
           else
-            cp frames/*.png result/
+            cp frames/*.png result/ || true
           fi
       - uses: actions/upload-artifact@v4
         with:
